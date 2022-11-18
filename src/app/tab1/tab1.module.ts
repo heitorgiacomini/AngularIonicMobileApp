@@ -6,6 +6,7 @@ import { Tab1Page } from './tab1.page';
 import { ExploreContainerComponentModule } from '../explore-container/explore-container.module';
 
 import { Tab1PageRoutingModule } from './tab1-routing.module';
+import { GpsComponent } from '../components/gps/gps/gps.component';
 
 @NgModule({
   imports: [
@@ -14,7 +15,10 @@ import { Tab1PageRoutingModule } from './tab1-routing.module';
     FormsModule,
     ExploreContainerComponentModule,
     Tab1PageRoutingModule
+
   ],
-  declarations: [Tab1Page]
+  declarations: [Tab1Page,GpsComponent],
+  exports:[]
+
 })
 export class Tab1PageModule {}
