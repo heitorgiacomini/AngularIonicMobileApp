@@ -1,0 +1,116 @@
+import { Component, NgZone } from '@angular/core';
+import { Capacitor } from '@capacitor/core';
+import { Geolocation } from '@capacitor/geolocation';
+import { ToastController } from '@ionic/angular';
+
+@Component({
+  selector: 'app-home',
+  templateUrl: 'home.page.html',
+  styleUrls: ['home.page.scss'],
+})
+
+export class HomePage {
+  coordinate: any;
+  watchCoordinate: any;
+  watchId: any;
+  distance: any;
+  statuswatch: any;
+  options = {
+    enableHighAccuracy: true,
+    timeout: 5000,
+    maximumAge: 10
+  };
+
+  constructor(private zone: NgZone, private toastCtrl: ToastController) { this.statuswatch = 0; }
+
+  async requestPermissions() {
+    const permResult = await Geolocation.requestPermissions();
+    console.log('Perm request result: ', permResult);
+    this.showToast(permResult);
+  }
+
+  async getCurrentCoordinate() {
+    if (!Capacitor.isPluginAvailable('Geolocation')) {
+      console.log('Plugin geolocation not available');
+      this.showToast('Plugin geolocation not available');
+      return;
+    }
+    await Geolocation.getCurrentPosition(this.options).then(data => {
+      this.coordinate = {
+        latitude: data.coords.latitude,
+        longitude: data.coords.longitude,
+        accuracy: data.coords.accuracy
+      };
+      this.statuswatch = 0;
+    }).catch(err => {
+      console.error(err);
+      this.showToast(err);
+    });
+  }
+
+  async watchPosition() {
+    try {
+      this.watchId = await Geolocation.watchPosition({
+        enableHighAccuracy: true,
+        timeout: 10000,
+        maximumAge: 10
+      }, (position, err) => {
+        console.log('Watch', position);
+        this.zone.run(() => {
+          this.watchCoordinate = {
+            latitude: position.coords.latitude,
+            longitude: position.coords.longitude,
+          };
+          this.distance = this.CaculateCoord();
+          this.statuswatch = 1;
+        });
+      });
+    } catch (e) {
+      console.error(e);
+      this.showToast(e);
+    }
+  }
+
+  async clearWatchs() {
+    if (this.watchId != null) {
+      await Geolocation.clearWatch({ id: this.watchId });
+      console.log('sudah di clear');
+      this.showToast("Status Baca Posisi Berhasil Dihentikan");
+      this.statuswatch = 0;
+    }else{
+      this.showToast("Status Baca Posisi Gagal Dihentikan");
+    }
+  }
+
+  CaculateCoord() {
+    if ((this.coordinate.latitude == this.watchCoordinate.latitude) && (this.coordinate.longitude == this.watchCoordinate.longitude)) {
+      return 0;
+    }
+    else {
+        var radlat1 = Math.PI * this.coordinate.latitude/180;
+        var radlat2 = Math.PI * this.watchCoordinate.latitude/180;
+        var theta = this.coordinate.longitude-this.watchCoordinate.longitude;
+        var radtheta = Math.PI * theta/180;
+        var dist = Math.sin(radlat1) * Math.sin(radlat2) + Math.cos(radlat1) * Math.cos(radlat2) * Math.cos(radtheta);
+        if (dist > 1) {
+            dist = 1;
+        }
+        dist = Math.acos(dist);
+        dist = dist * 180/Math.PI;
+        dist = dist * 60 * 1.1515;
+        dist = dist * 1.609344;
+        dist = dist * 1000;
+        return dist.toFixed(1);
+    }
+  }
+
+  async showToast(a){
+    const toast = await this.toastCtrl.create({
+        message: a,
+        duration: 5500,
+        position: 'top'
+    });
+    toast.present();
+  }
+
+}
